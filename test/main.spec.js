@@ -5,8 +5,8 @@ describe('Parser', function () {
     describe('calcDistance', function () {
         it('should return 0 for the same location', function () {
             const location = {
-                latitude: -23.5283406,
-                longitude: -47.4650814
+                latitude: -1.5283406,
+                longitude: -2.4650814
             };
             const response = sudoku.calculateDistance(location, location);
             assert.equal(response, 0);
