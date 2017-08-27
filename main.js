@@ -1,14 +1,14 @@
-var JSONStream = require('JSONStream');
+const JSONStream = require('JSONStream');
 const fs = require('fs');
+const options = require('./options');
 
 const days = new Map();
-const baseLocation = {
-    latitude: -23.5283406,
-    longitude: -47.4650814
+const baseLocation = options.baseLocation || {
+    latitude: 0,
+    longitude: 0
 };
-
-const maxDistance = 100; //Meters
-const dateFilter = new Date(2017, 7, 1);
+const maxDistance = options.maxDistance || 100; //Meters
+const dateFilter = options.dateFilter && new Date(options.dateFilter) || new Date(2000, 1, 1);
 
 const calculateDistance = (location1, location2) => {
     const R = 6378.137; // Radius of earth in KM
@@ -40,7 +40,8 @@ stream.pipe(parser)
             accuracy: data.accuracy
         };
 
-        if (!location.latitude || !location.longitude || location.date < dateFilter || location.accuracy > 100) {
+        if (!location.latitude || !location.longitude ||
+            location.date < dateFilter || location.accuracy > 100) {
             return;
         }
         if (days.has(location.date.toDateString())) {
@@ -58,31 +59,25 @@ stream.pipe(parser)
             }
             value.sort((a, b) => a.date - b.date);
             let timeArrivedInLocation;
+            const times = [];
             const totalTimeSpent = value.reduce((timeSpent, location) => {
                 if (isBaseLocation(location)) {
                     if (!timeArrivedInLocation) {
-                        console.log(location.date.toLocaleDateString(), ' Arrived at ',
-                            location.date.toLocaleTimeString());
                         timeArrivedInLocation = location.date;
+                        times.push(location.date.toLocaleTimeString());
                     }
                 } else {
                     if (timeArrivedInLocation) {
-                        console.log('Leaving the place at',
-                            location.date.toLocaleTimeString(),
-                            'lat:', location.latitude, 'lon:', location.longitude,
-                            'dist', calculateDistance(location, baseLocation), 'acc', location.accuracy);
                         timeSpent += location.date - timeArrivedInLocation;
                         timeArrivedInLocation = null;
+                        times.push(location.date.toLocaleTimeString());
                     }
                 }
                 return timeSpent;
             }, 0);
-            const d = new Date(totalTimeSpent);
-            const seconds = d.getSeconds();
-            const minutes = d.getMinutes();
-            const hours = d.getHours();
+            const hours = totalTimeSpent / (1000 * 60 * 60);
 
-            console.log(`Total time in place ${totalTimeSpent / (1000 * 60 * 60)} ${hours}:${minutes < 10 ? '0' : ''}${minutes}.${seconds}`);
+            console.log(`${value[0].date.toLocaleDateString()} - ${hours < 10 ? '0' : ''}${hours.toFixed(2)} - ${times}`);
         }, 0);
         console.log(`Found ${days.size} days that you where near the specified location`);
 
